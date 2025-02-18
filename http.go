@@ -8,7 +8,12 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	// "github.com/redis/go-redis/v9"
 )
+
+func TestFunction() {
+	fmt.Println("test function")
+}
 
 func SetupHttp() {
 	mux := http.NewServeMux()
@@ -25,7 +30,21 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 }
 
 func getWeather(w http.ResponseWriter, r *http.Request) {
-	err := godotenv.Load()
+	redis := NewRedisService()
+
+	address := r.URL.Query().Get("address")
+
+	cacheWeather, err := GetRedisValue[[]byte](redis.Client, address)
+
+	if err == nil {
+		fmt.Println("cache found")
+		w.WriteHeader(http.StatusOK)
+		w.Write(cacheWeather)
+
+		return
+	}
+
+	err = godotenv.Load()
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -34,8 +53,6 @@ func getWeather(w http.ResponseWriter, r *http.Request) {
 
 	weatherAPIKey := os.Getenv("WEATHER_API_KEY")
 	currDate := time.Now().Local().Format("2006-01-02")
-
-	address := r.URL.Query().Get("address")
 
 	url := fmt.Sprintf("https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/%s/%s?key=%s", address, currDate, weatherAPIKey)
 
@@ -53,6 +70,13 @@ func getWeather(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	err = SetRedisValue(redis.Client, address, body, time.Hour*1)
+
+	if err != nil {
+		// log error to analytics use case
+		fmt.Println("err save redis value: ", err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)

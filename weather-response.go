@@ -24,11 +24,7 @@ type WeatherResponse struct {
 	Longitude         float64             `json:"longitude"`
 	ResolvedAddress   string              `json:"resolvedAddress"`
 	Address           string              `json:"address"`
-	Timezone          string              `json:"timezone"`
-	Tzoffset          float64             `json:"tzoffset"`
-	Description       string              `json:"description"`
 	Days              []CurrentConditions `json:"days"`
-	Alerts            []interface{}       `json:"alerts"`
 	CurrentConditions CurrentConditions   `json:"currentConditions"`
 }
 
